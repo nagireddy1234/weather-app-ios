@@ -3,18 +3,20 @@ import * as Location from 'expo-location';
 import {
   View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, FlatList,
   Dimensions, TouchableOpacity,
+  Platform,
 } from 'react-native';
-import { ForecastEntry, groupForecastByDay, getWeatherData, getCityCoordinates } from '@/utils';
+import { ForecastEntry, groupForecastByDay, getWeatherData, getCityCoordinates } from '@/api';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCityContext } from '@/context/CityContext';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { OPENWEATHER_IMG_URL } from "@/constants/api";
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const defaultCities: string[] = ['London', 'Dublin', 'New York'];
+const defaultCities = ['London', 'Dublin', 'New York'];
 
 export default function HomeScreen(): JSX.Element {
   const {
-    cities, setCities, currentWeather, setCurrentWeather
+    cities, setCities, setCurrentWeather, currentWeather
   } = useCityContext();
 
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,11 @@ export default function HomeScreen(): JSX.Element {
   useEffect(() => {
     (async () => {
       try {
+        if (cities.length > 0) {
+          setLoading(false);
+          return;
+        }
+
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') throw new Error('Permission denied');
 
@@ -55,8 +62,19 @@ export default function HomeScreen(): JSX.Element {
     })();
   }, []);
 
+  useEffect(() => {
+    if (!currentWeather || !cities.length) return;
+    const index = cities.findIndex(c => c.location === currentWeather.location);
+    if (index !== -1) {
+      flatListRef.current?.scrollToIndex({ index, animated: true });
+      setActiveIndex(index);
+    }
+  }, [currentWeather, cities]);
+
   const handleDotPress = (index: number) => {
     flatListRef.current?.scrollToIndex({ index, animated: true });
+    setActiveIndex(index);
+    setCurrentWeather(cities[index]);
   };
 
   if (loading) {
@@ -79,6 +97,7 @@ export default function HomeScreen(): JSX.Element {
         onMomentumScrollEnd={(e) => {
           const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
           setActiveIndex(index);
+          setCurrentWeather(cities[index]);
         }}
         renderItem={({ item }) => {
           const dailyForecast = groupForecastByDay(item.forecast);
@@ -88,7 +107,7 @@ export default function HomeScreen(): JSX.Element {
                 <Text style={styles.location}>
                   {item.location === 'Current Location' && (
                     <>
-                      <FontAwesome6 name="location-arrow" size={12} style={{paddingRight:6, color:'#fff'}} />
+                      <FontAwesome6 name="location-arrow" size={12} style={{ paddingRight: 6, color: '#fff' }} />
                       <Text>Your Location</Text>
                     </>
                   )}
@@ -108,14 +127,14 @@ export default function HomeScreen(): JSX.Element {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.hourlyScroll}
                   >
-                    {item?.forecast.map((entry:ForecastEntry, index:number) => (
+                    {item.forecast.map((entry: ForecastEntry, index: number) => (
                       <View key={index} style={styles.forecastItem}>
                         <Text style={styles.forecastTime}>
-                          {new Date(entry?.dt_txt).getHours()}:00
+                          {new Date(entry.dt_txt).getHours()}:00
                         </Text>
                         <Image
                           source={{
-                            uri: `https://openweathermap.org/img/wn/${entry.weather[0].icon}@2x.png`,
+                            uri: `${OPENWEATHER_IMG_URL}/${entry.weather[0].icon}@2x.png`,
                           }}
                           style={styles.forecastIcon}
                         />
@@ -134,12 +153,13 @@ export default function HomeScreen(): JSX.Element {
                     <View key={index} style={styles.dailyItem}>
                       <Text style={styles.dailyDay}>{day.day}</Text>
                       <Image
-                        source={{ uri: `https://openweathermap.org/img/wn/${day.icon}@2x.png` }}
+                        source={{ uri: `${OPENWEATHER_IMG_URL}/${day.icon}@2x.png` }}
                         style={styles.dailyIcon}
                       />
                       <Text style={styles.dailyTemps}>
                         {Math.round(day.min)}° / {Math.round(day.max)}°
                       </Text>
+
                     </View>
                   ))}
                 </View>
@@ -272,7 +292,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     position: 'absolute',
-    bottom: 20,
+    bottom: Platform.OS === 'ios' ? 90 : 70,
     width: '100%',
   },
   dot: {

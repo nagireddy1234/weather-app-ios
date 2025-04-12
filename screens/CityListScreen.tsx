@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Dimensions, ImageBackground,
+  View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Dimensions, ImageBackground, Pressable, TouchableWithoutFeedback, Keyboard
 } from 'react-native';
-import { getCityCoordinates, getWeatherData, weatherBackgrounds } from '@/utils';
+import { getCityCoordinates, getWeatherData, weatherBackgrounds } from '@/api';
 import { useCityContext } from '@/context/CityContext';
 import { useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
@@ -11,20 +11,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CityListScreen(): JSX.Element {
-  const { cities, setCities, addCity } = useCityContext();
+
+  const { cities, setCities, addCity, setCurrentWeather } = useCityContext();
+
+  const router = useRouter();
+
+  const SCREEN_WIDTH = Dimensions.get('window').width;
+
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const SCREEN_WIDTH = Dimensions.get('window').width;
+
+  const isCityExists = useMemo(() => {
+    return [...cities].some((c) => c.location.toLowerCase() === city.trim().toLowerCase())
+  }, [city, cities]);
 
   const handleSearch = async () => {
     if (!city.trim()) return;
-    const isAlreadyAdded = cities.some(
-      (c) => c.location.toLowerCase() === city.trim().toLowerCase()
-    );
-    if (isAlreadyAdded) {
-      setError('City already added');
+    if (isCityExists) {
+      setError('City is already in the list');
+      setCity('');
       return;
     }
 
@@ -33,7 +39,7 @@ export default function CityListScreen(): JSX.Element {
       setError(null);
       const coords = await getCityCoordinates(city);
       const data = await getWeatherData(coords.lat, coords.lon);
-      setCities((prev) => [data, ...prev]);
+      addCity(data);
       setCity('');
     } catch {
       setError('City not found');
@@ -48,15 +54,17 @@ export default function CityListScreen(): JSX.Element {
     setCities(updated);
   };
 
-  const renderCard = ({ item }: any) => {
+  const renderCard = ({ item, index }: any) => {
     const bgImage = weatherBackgrounds[item.description] || weatherBackgrounds['clear sky'];
+    const isCurrentLocation = item.location === 'Current Location';
     let hasDeleted = false;
 
     return (
       <SwipeRow
         disableRightSwipe
-        rightOpenValue={-SCREEN_WIDTH * 0.75}
-        stopRightSwipe={-SCREEN_WIDTH * 0.75}
+        rightOpenValue={isCurrentLocation ? 0 : -83}
+        stopRightSwipe={-SCREEN_WIDTH * 0.9}
+        disableLeftSwipe={isCurrentLocation}
         onSwipeValueChange={({ value }) => {
           if (value < -SCREEN_WIDTH / 2 && !hasDeleted) {
             hasDeleted = true;
@@ -65,16 +73,17 @@ export default function CityListScreen(): JSX.Element {
         }}
       >
         <View style={styles.hiddenRow}>
-          <TouchableOpacity
-            onPress={() => handleDelete(cities.indexOf(item))}
-            style={styles.deleteButton}
-          >
-            <FontAwesome name="trash" size={24} color="#fff" />
-          </TouchableOpacity>
+          {!isCurrentLocation && (
+            <TouchableOpacity
+              onPress={() => handleDelete(index)}
+              style={styles.deleteButton}
+            >
+              <FontAwesome name="trash" size={24} color="#fff" />
+            </TouchableOpacity>)}
         </View>
-        <TouchableOpacity
+        <Pressable
           onPress={() => {
-            addCity(item);
+            setCurrentWeather(item);
             router.push('/');
           }}
         >
@@ -84,13 +93,13 @@ export default function CityListScreen(): JSX.Element {
             style={styles.card}
             imageStyle={{ borderRadius: 8 }}
           >
-            <View style={{ flexDirection: 'column' }}>
+            <View style={{ flexDirection: 'column', padding: 16 }}>
               <Text style={styles.city}>{item.location}</Text>
-              <Text style={styles.desc}>{item.description}</Text>
+              <Text style={styles.description}>{item.description}</Text>
             </View>
             <Text style={styles.temp}>{item.temp}°</Text>
           </ImageBackground>
-        </TouchableOpacity>
+        </Pressable>
       </SwipeRow>
     );
   };
@@ -109,16 +118,20 @@ export default function CityListScreen(): JSX.Element {
         <TouchableOpacity onPress={handleSearch} style={styles.button}>
           <Text style={styles.buttonText}>Search</Text>
         </TouchableOpacity>
-        {loading && <ActivityIndicator size="large" color="#fff" style={{ marginVertical: 10 }} />}
-        {error && <Text style={styles.error}>{error}</Text>}
-        <FlatList
-          data={cities}
-          keyExtractor={(item, index) => `${item.location}-${index}`}
-          renderItem={renderCard}
-          contentContainerStyle={styles.list}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={{ flex: 1 }}>
+            {loading && <ActivityIndicator size="large" color="#fff" style={{ marginVertical: 10 }} />}
+            {error && <Text style={styles.error}>{error}</Text>}
+            <FlatList
+              data={cities}
+              keyExtractor={(item, index) => `${item.location}-${index}`}
+              renderItem={renderCard}
+              contentContainerStyle={styles.list}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </TouchableWithoutFeedback>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -162,8 +175,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     backgroundColor: '#1c1c1e',
-    padding: 16,
-    paddingRight: 0,
     borderRadius: 8,
     marginBottom: 12,
     overflow: 'hidden',
@@ -175,32 +186,40 @@ const styles = StyleSheet.create({
   },
   temp: {
     color: '#fff',
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
     paddingRight: 8,
   },
-  desc: {
+  description: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
+    textTransform: 'capitalize',
   },
   error: {
-    color: 'red',
+    color: '#ff3b30',
     textAlign: 'center',
     marginBottom: 10,
+    fontSize: 16,
   },
   hiddenRow: {
-    alignItems: 'flex-end',
     flex: 1,
     justifyContent: 'center',
+    marginBottom: 12,
     borderRadius: 8,
-    marginBottom: 11,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    minHeight: 75,
+    height: '100%'
   },
   deleteButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 3,
+    width: 75,
+    backgroundColor: '#ff3b30',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ff3b30',
-    padding: 24,
     borderRadius: 8,
-    width: 75,
   },
 });

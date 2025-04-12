@@ -10,7 +10,7 @@ export default function TabLayout() {
          screenOptions={({ route }) => ({
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: 'transparent',
+            backgroundColor: '#b6eaff',
             position: 'absolute',
             borderRadius: 6,
             borderBottomEndRadius:0,
@@ -23,20 +23,21 @@ export default function TabLayout() {
             flexDirection: 'row',
             justifyContent: 'space-around',
             alignItems: 'center',
-            borderTopWidth: 0,
+            borderTopWidth: 1,
+            borderColor:'#fff',
             textShadow: "0 1px 1px rgba(0, 0, 0, 0.1)",
             elevation: 5,
-            shadowColor: '#000',
+            shadowColor: '#fff',
             shadowOffset: { width: 0, height: -2 },
             shadowOpacity: 0.2,
             shadowRadius: 4,
+            zIndex: 0,
           },
           tabBarLabelStyle: {
             fontSize: 12,
-            fontWeight: 'bold',
           },
-          tabBarActiveTintColor: '#004d99',
-          tabBarInactiveTintColor: '#004d99',
+          tabBarActiveTintColor: '#47abff',
+          tabBarInactiveTintColor: '#FFF',
           tabBarIcon: ({ color, size = 24 }) => {
             let iconName: keyof typeof FontAwesome.glyphMap;
             if (route.name === 'index') {

@@ -1,4 +1,6 @@
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEY } from "@/constants/api";
 
 export type WeatherData = {
   location: string;
@@ -23,10 +25,40 @@ export const CityProvider = ({ children }: { children: ReactNode }) => {
   const [cities, setCities] = useState<WeatherData[]>([]);
   const [currentWeather, setCurrentWeather] = useState<WeatherData | null>(null);
 
+  useEffect(() => {
+    const loadCitiesFromStorage = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved) as WeatherData[];
+          setCities(parsed);
+        }
+      } catch (error) {
+        console.error('Failed to load cities from storage:', error);
+      }
+    };
+    loadCitiesFromStorage();
+  }, []);
+
+  useEffect(() => {
+    const saveCitiesToStorage = async () => {
+      try {
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(cities));
+      } catch (error) {
+        console.error('Failed to save cities to storage:', error);
+      }
+    };
+
+    if (cities.length > 0) {
+      saveCitiesToStorage();
+    }
+  }, [cities]);
+
   const addCity = (weather: WeatherData) => {
+    console.log('Adding city:', weather);
     setCities((prev) => {
       const exists = prev.some((c) => c.location.toLowerCase() === weather.location.toLowerCase());
-      return exists ? prev : [weather, ...prev];
+      return exists ? prev : [...prev, weather];
     });
   };
 

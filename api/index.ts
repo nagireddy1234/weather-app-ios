@@ -5,6 +5,7 @@ import Snow from '@/assets/weather/snow.jpg';
 import Haze from '@/assets/weather/haze.png';
 import Drizzle from '@/assets/weather/drizzle.jpg';
 import FewClouds from '@/assets/weather/fewclouds.jpg';
+import { OPENWEATHER_API_KEY, OPENWEATHER_API_URL, OPENWEATHER_IMG_URL } from "@/constants/api";
 
 export interface Coordinates {
   lat: number;
@@ -28,15 +29,12 @@ export interface ForecastEntry {
   weather: { icon: string; description: string }[];
 }
 
-const OPENWEATHER_API_KEY = '8105eeffd782ca8f18e6dcdecefc2525';
-
-
 export async function getCityCoordinates(city: string): Promise<Coordinates> {
   try {
     if (!city.trim()) throw new Error('City name cannot be empty.');
 
     const res = await fetch(
-      `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${OPENWEATHER_API_KEY}`
+      `${OPENWEATHER_API_URL}/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${OPENWEATHER_API_KEY}`
     );
 
     if (!res.ok) throw new Error(`Failed to fetch coordinates for city: ${city}`);
@@ -59,10 +57,10 @@ export async function getWeatherData(lat: number, lon: number): Promise<WeatherD
 
     const [currentRes, forecastRes] = await Promise.all([
       fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${OPENWEATHER_API_KEY}`
+        `${OPENWEATHER_API_URL}/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${OPENWEATHER_API_KEY}`
       ),
       fetch(
-        `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${OPENWEATHER_API_KEY}`
+        `${OPENWEATHER_API_URL}/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${OPENWEATHER_API_KEY}`
       ),
     ]);
 
@@ -77,7 +75,7 @@ export async function getWeatherData(lat: number, lon: number): Promise<WeatherD
       temp: Math.round(current.main.temp),
       feels_like: Math.round(current.main.feels_like),
       description: current.weather[0]?.description || 'No description available',
-      icon: `https://openweathermap.org/img/wn/${current.weather[0]?.icon || '01d'}@2x.png`,
+      icon: `${OPENWEATHER_IMG_URL}/${current.weather[0]?.icon || '01d'}@2x.png`,
       forecast: forecast.list.slice(0, 8),
     };
   } catch (error) {
