@@ -1,63 +1,75 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react'
 import {
-  View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Dimensions, ImageBackground, Pressable, TouchableWithoutFeedback, Keyboard
-} from 'react-native';
-import { getCityCoordinates, getWeatherData, weatherBackgrounds } from '@/api';
-import { useCityContext } from '@/context/CityContext';
-import { useRouter } from 'expo-router';
-import { FontAwesome } from '@expo/vector-icons';
-import { SwipeRow } from 'react-native-swipe-list-view';
-import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  Dimensions,
+  ImageBackground,
+  Pressable,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ImageSourcePropType,
+} from 'react-native'
+import { getCityCoordinates, getWeatherData, weatherBackgrounds, WeatherData } from '@/api'
+import { useCityContext } from '@/context/CityContext'
+import { useRouter } from 'expo-router'
+import { FontAwesome } from '@expo/vector-icons'
+import { SwipeRow } from 'react-native-swipe-list-view'
+import { LinearGradient } from 'expo-linear-gradient'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function CityListScreen(): JSX.Element {
+  const { cities, setCities, addCity, setCurrentWeather } = useCityContext()
 
-  const { cities, setCities, addCity, setCurrentWeather } = useCityContext();
+  const router = useRouter()
 
-  const router = useRouter();
+  const SCREEN_WIDTH = Dimensions.get('window').width
 
-  const SCREEN_WIDTH = Dimensions.get('window').width;
-
-  const [city, setCity] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [city, setCity] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const isCityExists = useMemo(() => {
     return [...cities].some((c) => c.location.toLowerCase() === city.trim().toLowerCase())
-  }, [city, cities]);
+  }, [city, cities])
 
   const handleSearch = async () => {
-    if (!city.trim()) return;
+    if (!city.trim()) return
     if (isCityExists) {
-      setError('City is already in the list');
-      setCity('');
-      return;
+      setError('City is already in the list')
+      setCity('')
+      return
     }
 
     try {
-      setLoading(true);
-      setError(null);
-      const coords = await getCityCoordinates(city);
-      const data = await getWeatherData(coords.lat, coords.lon);
-      addCity(data);
-      setCity('');
+      setLoading(true)
+      setError(null)
+      const coords = await getCityCoordinates(city)
+      const data = await getWeatherData(coords.lat, coords.lon)
+      addCity(data)
+      setCity('')
+      Keyboard.dismiss()
     } catch {
-      setError('City not found');
+      setError('City not found')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleDelete = (index: number) => {
-    const updated = [...cities];
-    updated.splice(index, 1);
-    setCities(updated);
-  };
+    const updated = [...cities]
+    updated.splice(index, 1)
+    setCities(updated)
+  }
 
-  const renderCard = ({ item, index }: any) => {
-    const bgImage = weatherBackgrounds[item.description] || weatherBackgrounds['clear sky'];
-    const isCurrentLocation = item.location === 'Current Location';
-    let hasDeleted = false;
+  const renderCard = ({ item, index }: { item: WeatherData; index: number }) => {
+    const bgImage = weatherBackgrounds[item.description] || weatherBackgrounds['clear sky']
+    const isCurrentLocation = item.location === 'Current Location'
+    let hasDeleted = false
 
     return (
       <SwipeRow
@@ -67,28 +79,26 @@ export default function CityListScreen(): JSX.Element {
         disableLeftSwipe={isCurrentLocation}
         onSwipeValueChange={({ value }) => {
           if (value < -SCREEN_WIDTH / 2 && !hasDeleted) {
-            hasDeleted = true;
-            handleDelete(cities.indexOf(item));
+            hasDeleted = true
+            handleDelete(cities.indexOf(item))
           }
         }}
       >
         <View style={styles.hiddenRow}>
           {!isCurrentLocation && (
-            <TouchableOpacity
-              onPress={() => handleDelete(index)}
-              style={styles.deleteButton}
-            >
+            <TouchableOpacity onPress={() => handleDelete(index)} style={styles.deleteButton}>
               <FontAwesome name="trash" size={24} color="#fff" />
-            </TouchableOpacity>)}
+            </TouchableOpacity>
+          )}
         </View>
         <Pressable
           onPress={() => {
-            setCurrentWeather(item);
-            router.push('/');
+            setCurrentWeather(item)
+            router.push('/')
           }}
         >
           <ImageBackground
-            source={bgImage}
+            source={bgImage as ImageSourcePropType}
             resizeMode="cover"
             style={styles.card}
             imageStyle={{ borderRadius: 8 }}
@@ -101,8 +111,8 @@ export default function CityListScreen(): JSX.Element {
           </ImageBackground>
         </Pressable>
       </SwipeRow>
-    );
-  };
+    )
+  }
 
   return (
     <LinearGradient colors={['#47abff', '#b6eaff']} style={styles.container}>
@@ -120,7 +130,9 @@ export default function CityListScreen(): JSX.Element {
         </TouchableOpacity>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={{ flex: 1 }}>
-            {loading && <ActivityIndicator size="large" color="#fff" style={{ marginVertical: 10 }} />}
+            {loading && (
+              <ActivityIndicator size="large" color="#47abff" style={{ marginVertical: 10 }} />
+            )}
             {error && <Text style={styles.error}>{error}</Text>}
             <FlatList
               data={cities}
@@ -134,7 +146,7 @@ export default function CityListScreen(): JSX.Element {
         </TouchableWithoutFeedback>
       </SafeAreaView>
     </LinearGradient>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -209,7 +221,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: 'transparent',
     minHeight: 75,
-    height: '100%'
+    height: '100%',
   },
   deleteButton: {
     position: 'absolute',
@@ -222,4 +234,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
   },
-});
+})

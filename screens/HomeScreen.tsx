@@ -1,88 +1,122 @@
-import React, { useState, useRef, useEffect } from 'react';
-import * as Location from 'expo-location';
+import React, { useState, useRef, useEffect } from 'react'
+import * as Location from 'expo-location'
 import {
-  View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, FlatList,
-  Dimensions, TouchableOpacity,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+  FlatList,
+  Dimensions,
+  TouchableOpacity,
   Platform,
-} from 'react-native';
-import { ForecastEntry, groupForecastByDay, getWeatherData, getCityCoordinates } from '@/api';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useCityContext } from '@/context/CityContext';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import { OPENWEATHER_IMG_URL } from "@/constants/api";
+} from 'react-native'
+import NetInfo from '@react-native-community/netinfo'
+import { ForecastEntry, groupForecastByDay, getWeatherData, getCityCoordinates } from '@/api'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useCityContext } from '@/context/CityContext'
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6'
+import { OPENWEATHER_IMG_URL } from '@/constants/api'
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const defaultCities = ['London', 'Dublin', 'New York'];
+const SCREEN_WIDTH = Dimensions.get('window').width
+const defaultCities = ['London', 'Dublin', 'New York']
 
 export default function HomeScreen(): JSX.Element {
-  const {
-    cities, setCities, setCurrentWeather, currentWeather
-  } = useCityContext();
+  const { cities, setCities, setCurrentWeather, currentWeather, storageLoaded } = useCityContext()
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const flatListRef = useRef<FlatList>(null)
 
   useEffect(() => {
-    (async () => {
-      try {
-        if (cities.length > 0) {
-          setLoading(false);
-          return;
-        }
-
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') throw new Error('Permission denied');
-
-        const location = await Location.getCurrentPositionAsync({});
-        const weather = await getWeatherData(location.coords.latitude, location.coords.longitude);
-        weather.location = 'Current Location';
-        setCurrentWeather(weather);
-
-        const weatherPromises = defaultCities.map(async (cityName) => {
-          const coords = await getCityCoordinates(cityName);
-          return await getWeatherData(coords.lat, coords.lon);
-        });
-
-        const results = await Promise.all(weatherPromises);
-        const allCities = [weather, ...results];
-
-        const deduplicated = Array.from(
-          new Map(allCities.map((city) => [city.location.toLowerCase(), city])).values()
-        );
-
-        setCities(deduplicated);
-      } catch (err) {
-        console.error(err);
-        setError('Failed to load weather data');
-      } finally {
-        setLoading(false);
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (!state.isConnected) {
+        setError('No internet connection')
+        setLoading(false)
       }
-    })();
-  }, []);
+    })
+    return () => unsubscribe()
+  }, [])
+
+  const loadWeatherData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status !== 'granted') throw new Error('Permission denied')
+
+      const location = await Location.getCurrentPositionAsync({})
+      const weather = await getWeatherData(location.coords.latitude, location.coords.longitude)
+      weather.location = 'Current Location'
+      setCurrentWeather(weather)
+
+      const weatherPromises = defaultCities.map(async (cityName) => {
+        const coords = await getCityCoordinates(cityName)
+        return await getWeatherData(coords.lat, coords.lon)
+      })
+
+      const results = await Promise.all(weatherPromises)
+      const allCities = [weather, ...results]
+
+      const deduplicated = Array.from(
+        new Map(allCities.map((city) => [city.location.toLowerCase(), city])).values()
+      )
+
+      setCities(deduplicated)
+    } catch (err) {
+      console.error(err)
+      setError('Failed to load weather data. Please check your internet connection.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    if (!storageLoaded) return
+
+    if (cities.length === 0) {
+      loadWeatherData()
+    } else {
+      setLoading(false)
+    }
+  }, [storageLoaded, cities.length])
 
   useEffect(() => {
-    if (!currentWeather || !cities.length) return;
-    const index = cities.findIndex(c => c.location === currentWeather.location);
+    if (!currentWeather || !cities.length) return
+    const index = cities.findIndex((c) => c.location === currentWeather.location)
     if (index !== -1) {
-      flatListRef.current?.scrollToIndex({ index, animated: true });
-      setActiveIndex(index);
+      flatListRef.current?.scrollToIndex({ index, animated: true })
+      setActiveIndex(index)
     }
-  }, [currentWeather, cities]);
+  }, [currentWeather, cities])
 
   const handleDotPress = (index: number) => {
-    flatListRef.current?.scrollToIndex({ index, animated: true });
-    setActiveIndex(index);
-    setCurrentWeather(cities[index]);
-  };
+    flatListRef.current?.scrollToIndex({ index, animated: true })
+    setActiveIndex(index)
+    setCurrentWeather(cities[index])
+  }
+
+  const retryLoad = () => {
+    loadWeatherData()
+  }
 
   if (loading) {
-    return <ActivityIndicator size="large" color="#fff" style={styles.centered} />;
+    return <ActivityIndicator size="large" color="#47abff" style={styles.centered} />
   }
 
   if (error || !cities.length) {
-    return <Text style={styles.error}>{error || 'No weather data'}</Text>;
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.error}>{error}</Text>
+        <TouchableOpacity onPress={retryLoad} style={styles.retryButton}>
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    )
   }
 
   return (
@@ -95,19 +129,22 @@ export default function HomeScreen(): JSX.Element {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(e) => {
-          const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-          setActiveIndex(index);
-          setCurrentWeather(cities[index]);
+          const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH)
+          setActiveIndex(index)
+          setCurrentWeather(cities[index])
         }}
         renderItem={({ item }) => {
-          const dailyForecast = groupForecastByDay(item.forecast);
+          const dailyForecast = groupForecastByDay(item.forecast)
           return (
-            <LinearGradient colors={['#47abff', '#b6eaff']} style={{ width: SCREEN_WIDTH, flex: 1 }}>
+            <LinearGradient
+              colors={['#47abff', '#b6eaff']}
+              style={{ width: SCREEN_WIDTH, flex: 1 }}
+            >
               <ScrollView contentContainerStyle={styles.scrollContent}>
                 <Text style={styles.location}>
                   {item.location === 'Current Location' && (
                     <>
-                      <FontAwesome6 name="location-arrow" size={12} style={{ paddingRight: 6, color: '#fff' }} />
+                      <FontAwesome6 name="location-arrow" size={12} style={{ color: '#fff' }} />
                       <Text>Your Location</Text>
                     </>
                   )}
@@ -115,11 +152,12 @@ export default function HomeScreen(): JSX.Element {
                 <Text style={styles.city}>{item?.location}</Text>
                 <Text style={styles.temp}>{item?.temp}°</Text>
                 <Text style={styles.feels}>Feels Like: {item?.feels_like}°</Text>
-                <Text style={styles.range}>H:{item?.temp + 2}°  L:{item.temp - 2}°</Text>
+                <Text style={styles.range}>
+                  H:{item?.temp + 2}° L:{item.temp - 2}°
+                </Text>
                 <Image source={{ uri: item?.icon }} style={styles.icon} />
                 <Text style={styles.description}>{item?.description}</Text>
 
-                {/* Hourly Forecast */}
                 <View style={styles.block}>
                   <Text style={styles.blockTitle}>Hourly Forecast</Text>
                   <ScrollView
@@ -138,9 +176,7 @@ export default function HomeScreen(): JSX.Element {
                           }}
                           style={styles.forecastIcon}
                         />
-                        <Text style={styles.forecastTemp}>
-                          {Math.round(entry.main.temp)}°
-                        </Text>
+                        <Text style={styles.forecastTemp}>{Math.round(entry.main.temp)}°</Text>
                       </View>
                     ))}
                   </ScrollView>
@@ -159,13 +195,12 @@ export default function HomeScreen(): JSX.Element {
                       <Text style={styles.dailyTemps}>
                         {Math.round(day.min)}° / {Math.round(day.max)}°
                       </Text>
-
                     </View>
                   ))}
                 </View>
               </ScrollView>
             </LinearGradient>
-          );
+          )
         }}
       />
 
@@ -177,7 +212,7 @@ export default function HomeScreen(): JSX.Element {
         ))}
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -185,6 +220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 64,
     paddingBottom: 40,
+    minHeight: Platform.OS === 'web' ? Dimensions.get('window').height : undefined,
   },
   centered: {
     flex: 1,
@@ -221,11 +257,13 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     marginVertical: 8,
+    marginBottom: -4,
   },
   description: {
-    fontSize: 18,
-    color: '#eee',
-    marginBottom: 20,
+    fontSize: 24,
+    color: '#ddd',
+    marginBottom: 12,
+    fontWeight: 700,
     textTransform: 'capitalize',
   },
   block: {
@@ -307,4 +345,15 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
   },
-});
+  retryButton: {
+    backgroundColor: '#47abff',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  retryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+})
