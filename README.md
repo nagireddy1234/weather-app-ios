@@ -1,8 +1,42 @@
-# Welcome to your Expo app 👋
+# Welcome to Weather Finder App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This is a IOS-style Weather Finder App project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Get started
+An iOS-style weather app built with **React Native** and **Expo**, offering real-time weather updates by city or current location. Inspired by the Apple Weather app.
+
+---
+
+## 🚀 Features
+
+- 🌍 Get weather for **current location** using device GPS
+- 🏙️ **Search & add cities** to a persistent saved list
+- 📄 **7-day and hourly forecasts** using OpenWeather API
+- 🌈 Dynamic **backgrounds based on weather**
+- ✨ **Swipe to delete** cities
+- 🌐 **Offline support** using AsyncStorage
+- 🔍 City selector with autocomplete and flag icons
+- 🔧 **EAS Build** & CI/CD ready
+
+---
+
+## 🧰 Tech Stack
+
+| Tech | Purpose |
+|------|---------|
+| **React Native + Expo** | Cross-platform mobile development |
+| **Expo Location** | Get user’s current position |
+| **OpenWeather API** | Weather data |
+| **AsyncStorage** | Persist city weather data |
+| **React Navigation** | Bottom tab & stack navigation |
+| **React Native Swipe List View** | Swipe-to-delete city cards |
+| **LinearGradient (expo-linear-gradient)** | Background gradients |
+| **EAS Build** | Cloud builds for iOS and Android |
+| **Husky + lint-staged** | Pre-commit linting & formatting |
+| **.env config** | Secure API key handling
+
+---
+
+## 🧪 How to Run & Test
 
 1. Install dependencies
 
@@ -10,41 +44,34 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Create .env
+
+       OPENWEATHER_API_KEY=your_api_key_here
+
+3. Start the app
 
    ```bash
     npx expo start
    ```
 
 In the output, you'll find options to open the app in a
+- [Expo Go](https://expo.dev/go)
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)
 - [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Get a fresh project
+## 🧪 How to Build for Production
 
-When you're ready, run:
+ 1. iOS .ipa
 
-```bash
-npm run reset-project
-```
+   ```bash
+      eas build --platform ios --profile preview
+   ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+ 2. Android .apk
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+   ```bash
+      eas build --platform android --profile preview
+   ```
