@@ -13,6 +13,7 @@ export interface Coordinates {
 }
 
 export interface WeatherData {
+  currentLocation: string
   location: string
   temp: number
   feels_like: number
@@ -28,7 +29,6 @@ export interface ForecastEntry {
   }
   weather: { icon: string; description: string }[]
 }
-
 export async function getCityCoordinates(city: string): Promise<Coordinates> {
   try {
     if (!city.trim()) throw new Error('City name cannot be empty.')
@@ -71,12 +71,13 @@ export async function getWeatherData(lat: number, lon: number): Promise<WeatherD
     const forecast = await forecastRes.json()
 
     return {
+      currentLocation: '',
       location: current?.name || 'Unknown Location',
       temp: Math.round(current.main.temp),
       feels_like: Math.round(current.main.feels_like),
       description: current.weather[0]?.description || 'No description available',
       icon: `${OPENWEATHER_IMG_URL}/${current.weather[0]?.icon || '01d'}@2x.png`,
-      forecast: forecast.list.slice(0, 8),
+      forecast: forecast.list,
     }
   } catch (error) {
     console.error('Error in getCityCoordinates:', error instanceof Error ? error.message : error)
@@ -91,7 +92,9 @@ export function groupForecastByDay(forecast: ForecastEntry[]) {
     const grouped: Record<string, ForecastEntry[]> = {}
 
     forecast.forEach((entry) => {
-      const day = new Date(entry.dt_txt).toLocaleDateString('en-US', { weekday: 'short' })
+      const day = new Date(entry.dt_txt).toLocaleDateString('en-US', {
+        weekday: 'short',
+      })
       if (!grouped[day]) grouped[day] = []
       grouped[day].push(entry)
     })

@@ -68,10 +68,11 @@ export default function CityListScreen(): JSX.Element {
 
   const renderCard = ({ item, index }: { item: WeatherData; index: number }) => {
     const bgImage = weatherBackgrounds[item.description] || weatherBackgrounds['clear sky']
-    const isCurrentLocation = item.location === 'Current Location'
+    const isCurrentLocation = item.currentLocation === item.location
     let hasDeleted = false
 
     return (
+      // @ts-ignore
       <SwipeRow
         disableRightSwipe
         rightOpenValue={isCurrentLocation ? 0 : -83}
@@ -101,10 +102,11 @@ export default function CityListScreen(): JSX.Element {
             source={bgImage as ImageSourcePropType}
             resizeMode="cover"
             style={styles.card}
-            imageStyle={{ borderRadius: 8 }}
           >
             <View style={{ flexDirection: 'column', padding: 16 }}>
-              <Text style={styles.city}>{item.location}</Text>
+              <Text style={styles.city}>
+                {item.location} {isCurrentLocation && '(My location)'}
+              </Text>
               <Text style={styles.description}>{item.description}</Text>
             </View>
             <Text style={styles.temp}>{item.temp}°</Text>

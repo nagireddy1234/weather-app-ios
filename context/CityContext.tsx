@@ -10,6 +10,7 @@ export type WeatherData = {
   description: string
   icon: string
   forecast: ForecastEntry[]
+  currentLocation: string
 }
 
 interface CityContextType {
@@ -68,7 +69,14 @@ export const CityProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <CityContext.Provider
-      value={{ cities, setCities, currentWeather, setCurrentWeather, addCity, storageLoaded }}
+      value={{
+        cities,
+        setCities,
+        currentWeather,
+        setCurrentWeather,
+        addCity,
+        storageLoaded,
+      }}
     >
       {children}
     </CityContext.Provider>

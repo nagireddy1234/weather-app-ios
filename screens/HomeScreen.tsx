@@ -50,7 +50,7 @@ export default function HomeScreen(): JSX.Element {
 
       const location = await Location.getCurrentPositionAsync({})
       const weather = await getWeatherData(location.coords.latitude, location.coords.longitude)
-      weather.location = 'Current Location'
+      weather.currentLocation = weather.location
       setCurrentWeather(weather)
 
       const weatherPromises = defaultCities.map(async (cityName) => {
@@ -140,12 +140,17 @@ export default function HomeScreen(): JSX.Element {
               colors={['#47abff', '#b6eaff']}
               style={{ width: SCREEN_WIDTH, flex: 1 }}
             >
-              <ScrollView contentContainerStyle={styles.scrollContent}>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+              >
                 <Text style={styles.location}>
-                  {item.location === 'Current Location' && (
+                  {item.currentLocation && (
                     <>
                       <FontAwesome6 name="location-arrow" size={12} style={{ color: '#fff' }} />
-                      <Text>Your Location</Text>
+                      <Text>My Location</Text>
                     </>
                   )}
                 </Text>
@@ -164,6 +169,7 @@ export default function HomeScreen(): JSX.Element {
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.hourlyScroll}
+                    nestedScrollEnabled={true}
                   >
                     {item.forecast.map((entry: ForecastEntry, index: number) => (
                       <View key={index} style={styles.forecastItem}>
@@ -183,20 +189,28 @@ export default function HomeScreen(): JSX.Element {
                 </View>
 
                 {/* Daily Forecast */}
-                <View style={styles.block}>
+                <View style={[styles.block, { maxHeight: 210 }]}>
                   <Text style={styles.blockTitle}>5-Day Forecast</Text>
-                  {dailyForecast.map((day, index) => (
-                    <View key={index} style={styles.dailyItem}>
-                      <Text style={styles.dailyDay}>{day.day}</Text>
-                      <Image
-                        source={{ uri: `${OPENWEATHER_IMG_URL}/${day.icon}@2x.png` }}
-                        style={styles.dailyIcon}
-                      />
-                      <Text style={styles.dailyTemps}>
-                        {Math.round(day.min)}° / {Math.round(day.max)}°
-                      </Text>
-                    </View>
-                  ))}
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 8 }}
+                    nestedScrollEnabled={true}
+                  >
+                    {dailyForecast.map((day, index) => (
+                      <View key={index} style={styles.dailyItem}>
+                        <Text style={styles.dailyDay}>{day.day}</Text>
+                        <Image
+                          source={{
+                            uri: `${OPENWEATHER_IMG_URL}/${day.icon}@2x.png`,
+                          }}
+                          style={styles.dailyIcon}
+                        />
+                        <Text style={styles.dailyTemps}>
+                          {Math.round(day.min)}° / {Math.round(day.max)}°
+                        </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
                 </View>
               </ScrollView>
             </LinearGradient>
@@ -220,7 +234,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 64,
     paddingBottom: 40,
-    minHeight: Platform.OS === 'web' ? Dimensions.get('window').height : undefined,
+    minHeight: Dimensions.get('window').height,
   },
   centered: {
     flex: 1,
@@ -228,7 +242,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   location: {
-    color: '#bbb',
+    color: '#ddd',
     fontSize: 14,
     marginBottom: 4,
   },
